@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   tailscale-derp:
     build: .
@@ -24,3 +26,27 @@ services:
     restart: always
     devices:
       - /dev/net/tun:/dev/net/tun
+    networks:
+      - derp-network # 确保连接到自定义网络
+
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"    # HTTP
+      - "443:443"  # HTTPS
+      # 如果需要，也可以暴露其他端口
+    volumes:
+      - $PWD/Caddyfile:/etc/caddy/Caddyfile
+      - $PWD/caddy_data:/data
+      - $PWD/caddy_config:/config
+    networks:
+      - derp-network
+    environment:
+      - DERP_DOMAIN=${DERP_DOMAIN}  # 您需要在 .env 文件中设置这个变量
+
+networks:
+  derp-network:
+    driver: bridge
+

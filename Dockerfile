@@ -1,11 +1,15 @@
 FROM alpine:latest
-#Add a goproxy
-ENV GOPROXY "https://goproxy.cn"
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
-#Install Tailscale and requirements
-RUN apk add curl iptables
 
-#Install GO and Tailscale DERPER
+# 设置环境变量
+# 使用国内 Go 模块代理
+ENV GOPROXY="https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,direct"
+# 设置 Alpine 软件源为国内镜像
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
+# 安装基础依赖
+RUN apk add --no-cache curl iptables
+
+# 安装 GO - 使用国内镜像和固定版本
 RUN APKARCH="$(apk --print-arch)" && \
     case "${APKARCH}" in \
         x86_64) GOARCH=amd64 ;; \
@@ -16,23 +20,29 @@ RUN APKARCH="$(apk --print-arch)" && \
         s390x) GOARCH=s390x ;; \
         *) echo "Unsupported architecture: ${APKARCH}" >&2; exit 1 ;; \
     esac && \
-    LATEST="$(curl -fsSL 'https://go.dev/VERSION?m=text'| head -n 1)" && \
-    curl -fsSL "https://dl.google.com/go/${LATEST}.linux-${GOARCH}.tar.gz" -o go.tar.gz && \
+    # 使用国内镜像站下载Go安装包（固定版本为1.21.0）
+    curl -fsSL "https://golang.google.cn/dl/go1.24.6.linux-${GOARCH}.tar.gz" -o go.tar.gz && \
     tar -C /usr/local -xzf go.tar.gz && \
     rm go.tar.gz
+
+# 设置Go环境变量
 ENV PATH="/usr/local/go/bin:$PATH"
+
+# 安装 Tailscale DERPER
 RUN go install tailscale.com/cmd/derper@latest
 
-#Install Tailscale and Tailscaled
-RUN apk add tailscale
+# 安装 Tailscale
+RUN apk add --no-cache tailscale
 
-#Copy init script
+# 复制初始化脚本
 COPY init.sh /init.sh
 RUN chmod +x /init.sh
 
-#Derper Web Ports
+# 暴露端口
+# Derper Web 端口
 EXPOSE 444/tcp
-#STUN
+# STUN 端口
 EXPOSE 3478/udp
 
-ENTRYPOINT /init.sh
+# 设置入口点
+ENTRYPOINT ["/init.sh"]

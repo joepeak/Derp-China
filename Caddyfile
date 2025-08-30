@@ -1,0 +1,19 @@
+# 将 example.com 替换为您的实际域名
+{$DERP_DOMAIN} {
+    # 反向代理到 tailscale-derp 服务的 444 端口
+    reverse_proxy tailscale-derp:444 {
+        # 保持主机头，某些应用需要
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # 如果您需要处理 WebSocket 连接（如果 derper 使用）
+    @ws {
+        path /derp*
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @ws tailscale-derp:444
+}

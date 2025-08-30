@@ -5,7 +5,7 @@
 ## 域名
 这个 Dockerfile 要求 Derp 服务器必须使用域名，请提前准备好自己的域名。备案可以不用做，建议在后期开不常见端口。
 
-## HTTPs 证书
+## HTTPs 证书(caddy 会自动处理，这一步可以省略)
 建议通过 `Certbot` 等工具进行自动化 SSL 证书申请，可以参考 @frank-lam 的[使用 Certbot 为网站签发永久免费的 HTTPS 证书](https://www.frankfeekr.cn/2021/03/28/let-is-encrypt-cerbot-for-https/index.html)。
 
 ## 创建 tailscale 一次性认证 key
@@ -14,7 +14,7 @@
 <img width="500" alt="image" src="https://github.com/S4kur4/Derp-China/assets/17521941/093b6608-9100-47b5-87d9-ac59f629d1b6">
 
 ## 修改配置
-修改 `.env` 文件里的参数，把 `TAILSCALE_DERP_HOSTNAME` 改成你自己的域名，然后把刚刚记录下的 key 填进 `TAILSCALE_AUTH_KEY`。
+重命名 `.env.example` 为 `.env`, 修改 `.env` 文件里的参数，把 `TAILSCALE_DERP_HOSTNAME` 和 `DERP_DOMAIN` 改成你自己的域名，然后把刚刚记录下的 key 填进 `TAILSCALE_AUTH_KEY`。
 
 ## 启动
 ```
@@ -35,7 +35,7 @@ curl http://127.0.0.1:444
   This is a <a href="https://tailscale.com/">Tailscale</a> DERP server.
 </p>
 ```
-## 安装配置 Nginx 为反向代理
+## 安装配置 Nginx 为反向代理(忽略这一步,因为容器会启动 caddy, 并已经配置正确)
 这里不一定用 Nginx，换别的 caddy 什么的也行。只要配置个反代转发到 `http://127.0.0.1:444` 就行。公网端口建议开不常见端口，例如 442、444 等。
 
 我的 Nginx 配置给你参考：
@@ -107,22 +107,23 @@ server {
 
 ```
 "derpMap": {
-		"Regions": {
-			"901": {
-				"RegionID":   901,
-				"RegionCode": "myderp",
-				"RegionName": "myderp",
-				"Nodes": [
-					{
-						"Name":     "901a",
-						"RegionID": 901,
-						"DERPPort": 442,
-						"HostName": "derp.xxxx.xx",
-					},
-				],
-			},
-		},
-	}
+                "Regions": {
+                        "901": {
+                                "RegionID":   901,
+                                "RegionCode": "myderp",
+                                "RegionName": "myderp",
+                                "Nodes": [
+                                        {
+                                                "Name":     "901a",
+                                                "RegionID": 901,
+                                                "HostName": "derp.xxxx.xx",
+                        "STUNPort": 3478,
+                                                "DERPPort": 443,
+                                        },
+                                ],
+                        },
+                },
+        }
 ```
 这里就结束了，最后使用 tailscale 命令行通过 `tailscale ping` 和 `tailscale status` 检查验证一下。
 # 致谢
